@@ -16,7 +16,6 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
 CHANNEL_ID = os.getenv("CHANNEL_ID", "@ecomlena")
-PRIVACY_URL = os.getenv("PRIVACY_URL", "https://your-domain.ru/privacy")
 
 # ЛЕНДИНГИ ПРАКТИКУМОВ И БАНДЛА
 URL_BUNDLE = "https://ecomlena.ru/bundle"
@@ -73,26 +72,7 @@ class BroadcastState(StatesGroup):
     waiting_for_message = State()
 
 
-# --- КНОПКИ ДЛЯ КАЖДОГО НАПРАВЛЕНИЯ ---
-def get_bundle_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🎁 Забронировать Бандл 3-в-1 со скидкой",
-                    url=URL_BUNDLE,
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📢 Авторский Telegram-канал",
-                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
-                )
-            ],
-        ]
-    )
-
-
+# --- ОДНОКНОПОЧНЫЕ КЛАВИАТУРЫ ДЛЯ ВЕТОК (СТРОГО 1 КНОПКА) ---
 def get_nisha_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -101,18 +81,7 @@ def get_nisha_keyboard():
                     text="🚀 Посмотреть практикум «Маржинальные ниши»",
                     url=URL_NISHA,
                 )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔥 Заберите Полный Бандл 3-в-1", url=URL_BUNDLE
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📢 Авторский Telegram-канал",
-                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
-                )
-            ],
+            ]
         ]
     )
 
@@ -122,21 +91,10 @@ def get_china_keyboard():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🚀 Посмотреть практикум «Импорт из Китая & 1688»",
+                    text="🚀 Посмотреть практикум «Закупки в Китае & 1688»",
                     url=URL_CHINA,
                 )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🔥 Заберите Полный Бандл 3-в-1", url=URL_BUNDLE
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📢 Авторский Telegram-канал",
-                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
-                )
-            ],
+            ]
         ]
     )
 
@@ -149,18 +107,20 @@ def get_smysly_keyboard():
                     text="🚀 Посмотреть практикум «Продающие Смыслы»",
                     url=URL_PACKING,
                 )
-            ],
+            ]
+        ]
+    )
+
+
+def get_bundle_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🔥 Заберите Полный Бандл 3-в-1", url=URL_BUNDLE
+                    text="🎁 Забронировать Бандл 3-в-1 со скидкой 30%",
+                    url=URL_BUNDLE,
                 )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📢 Авторский Telegram-канал",
-                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
-                )
-            ],
+            ]
         ]
     )
 
@@ -177,27 +137,45 @@ async def check_subscription(user_id: int) -> bool:
         return True
 
 
-# --- АВТОДОГРЕВ ДО БАНДЛА (ЧЕРЕЗ 24 ЧАСА) ---
-async def schedule_bundle_upsell(chat_id: int, lead_magnet_name: str):
+# --- ИНДИВИДУАЛЬНЫЕ АВТОДОГРЕВЫ ДО БАНДЛА (ЧЕРЕЗ 24 ЧАСА) ---
+async def schedule_bundle_upsell(chat_id: int, branch: str):
     await asyncio.sleep(86400)  # 24 часа
-    upsell_text = (
-        f"📊 <b>Вчера вы забирали материалы по теме «{lead_magnet_name}».</b>\n\n"
-        "Знаете, какая главная ошибка селлеров? Наладить один процесс, но провалиться в других.\n\n"
-        "Товарный бизнес — это **Треугольник Успеха**:\n"
-        "1️⃣ Маржинальная узкая ниша\n"
-        "2️⃣ Прямой белый/карго импорт из Китая\n"
-        "3️⃣ Продающие смыслы и упаковка\n\n"
-        "Заберите **Полный Бандл из 3-х Практикумов**, чтобы закрыть все 3 направления под ключ со скидкой 30%!"
-    )
-    try:
-        await bot.send_message(
-            chat_id,
-            upsell_text,
-            parse_mode="HTML",
-            reply_markup=get_bundle_keyboard(),
-        )
-    except Exception as e:
-        logging.error(f"Ошибка отправки догрева: {e}")
+
+    upsell_messages = {
+        "marzha": (
+            "📊 <b>Вчера вы забирали Калькулятор и гайд по Узким Нишам.</b>\n\n"
+            "Выбрать идеальную нишу — это важный первый шаг. Но если у вас нет прямого дешевого импорта из Китая и смысловой упаковки карточки, конкуренты быстро сожмут вашу маржу.\n\n"
+            "Товарный бизнес 2026 года — это **Треугольник Успеха**:\n"
+            "1️⃣ Маржинальная узкая ниша\n"
+            "2️⃣ Прямой импорт без перекупщиков\n"
+            "3️⃣ Продающая смысловая упаковка\n\n"
+            "Заберите **Полный Бандл из 3-х Практикумов Елены Тимошенко**, чтобы выстроить всю систему под ключ со скидкой 30%!"
+        ),
+        "china": (
+            "🇨🇳 <b>Вчера вы забирали гайды по закупкам в Китае.</b>\n\n"
+            "Выгодный закуп на 1688 — это мощный рычаг. Но если товар выбран в перегретой нише без маржи, или карточка упакована «как у всех» — товар застрянет на складе.\n\n"
+            "Закройте все 3 элемента **Треугольника Успеха** (Ниша + Импорт + Смыслы) одновременно!\n\n"
+            "Заберите **Полный Бандл из 3-х Практикумов Елены Тимошенко** и стройте системный бизнес со скидкой 30%!"
+        ),
+        "smysly": (
+            "🧠 <b>Вчера вы забирали гайды по Продающим Смыслам.</b>\n\n"
+            "Сильный оффер поднимает конверсию в 2–3 раза. Но если продукт изначально выбран без математики маржинальности, а закупки идут через дорогих перекупщиков — высокой прибыли не будет.\n\n"
+            "Соедините Смыслы с Нишей и Прямым Импортом в единый **Треугольник Успеха**!\n\n"
+            "Заберите **Полный Бандл из 3-х Практикумов Елены Тимошенко** со скидкой 30%!"
+        ),
+    }
+
+    text = upsell_messages.get(branch)
+    if text:
+        try:
+            await bot.send_message(
+                chat_id,
+                text,
+                parse_mode="HTML",
+                reply_markup=get_bundle_keyboard(),
+            )
+        except Exception as e:
+            logging.error(f"Ошибка отправки догрева: {e}")
 
 
 # --- ВЫДАЧА 5 МИНИ-УРОКОВ ---
@@ -276,7 +254,7 @@ async def send_lesson(chat_id: int, lesson_num: int):
         await bot.send_message(
             chat_id,
             "🔥 <b>Вы прошли весь бесплатный мини-курс!</b>\n\n"
-            "Чтобы построить системный бизнес под ключ без ошибок — заберите **Полный Бандл из 3-х Практикумов** со специальной скидкой!",
+            "Чтобы построить системный бизнес под ключ без ошибок — заберите **Полный Бандл из 3-х Практикумов Елены Тимошенко** со специальной скидкой 30%!",
             parse_mode="HTML",
             reply_markup=get_bundle_keyboard(),
         )
@@ -294,13 +272,13 @@ async def process_user_request(message: types.Message, keyword: str):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="📢 1. Подписаться на канал",
+                        text="📢 Подписаться на канал",
                         url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="🔄 2. Я подписался, проверить",
+                        text="🔄 Я подписался, проверить",
                         callback_data=f"check_sub_{keyword}",
                     )
                 ],
@@ -315,23 +293,17 @@ async def process_user_request(message: types.Message, keyword: str):
         return
 
     # 2. Выдача контента по кодовому слову
-    legal_note = f"\n\nℹ️ *Продолжая использовать бота, вы даете согласие на обработку персональных данных (152-ФЗ) и соглашаетесь с [Политикой конфиденциальности]({PRIVACY_URL}).*"
-
     if keyword in ["старт", "start"]:
         await message.answer(
-            "👋 **Приветствую!** Рада видеть вас на бесплатном Тест-Драйве Товарного Бизнеса 2026!"
-            + legal_note,
+            "👋 **Приветствую!** Рада видеть вас на бесплатном Тест-Драйве Товарного Бизнеса 2026!",
             parse_mode="Markdown",
-            disable_web_page_preview=True,
         )
         await send_lesson(message.chat.id, 1)
 
     elif keyword == "маржа":
         await message.answer(
-            "📊 **Выдаю материалы по Юнит-Экономике и Узким Нишам:**"
-            + legal_note,
+            "📊 **Выдаю материалы по Юнит-Экономике и Узким Нишам:**",
             parse_mode="Markdown",
-            disable_web_page_preview=True,
         )
         if os.path.exists("files/calc_unit_economy.xlsx"):
             await message.answer_document(
@@ -344,23 +316,30 @@ async def process_user_request(message: types.Message, keyword: str):
                 caption="📖 Гайд «15 узких ниш 2026 года»",
             )
 
-        # Сообщение-догрев
+        # Сильное дожимное сообщение
+        warmup_text = (
+            "💡 **Слабый товар сливает бюджет еще до старта.**\n\n"
+            "Очень часто селлеры выбирают нишу на эмоциях: *«у других же продается»*, *«кажется перспективным»*. "
+            "А в итоге сталкиваются с жестким демпингом, дорогой рекламой и отсутствием чистой прибыли. **Деньги теряют не на идеях, а на выборе вслепую без системы.**\n\n"
+            "На практикуме **«Золотая Ниша»** вы за 11 уроков пройдете путь от поиска идей до точного выбора:\n\n"
+            "🔹 **5 стратегий поиска** прибыльных и узких ниш\n"
+            "🔹 **Оценка спроса и конкуренции:** как не зайти туда, где вас раздавят гиганты\n"
+            "🔹 **Математика маржинальности:** сравнение вариантов строго по цифрам\n"
+            "🔹 **Результат:** готовая система и таблица оценки ниш для выбора с холодной головой\n\n"
+            "🎓 *Автор курса:* **Елена Тимошенко** — дипломированный маркетолог, эксперт e-Commerce с 2007 года.\n\n"
+            "👇 **Нажмите кнопку ниже, чтобы посмотреть практикум и забрать систему оценки ниш:**"
+        )
         await message.answer(
-            "💡 **Хотите глубже освоить поиск прибыльных ниш и юнит-экономику?**\n\n"
-            "Посмотреть практикум №1 или заберите полный Бандл 3-в-1 со скидкой!",
+            warmup_text,
             parse_mode="Markdown",
             reply_markup=get_nisha_keyboard(),
         )
-        asyncio.create_task(
-            schedule_bundle_upsell(message.chat.id, "Маржа и Юнит-экономика")
-        )
+        asyncio.create_task(schedule_bundle_upsell(message.chat.id, "marzha"))
 
     elif keyword == "китай":
         await message.answer(
-            "🇨🇳 **Выдаю материалы по Закупкам и Логистике в Китае:**"
-            + legal_note,
+            "🇨🇳 **Выдаю материалы по Закупкам и Логистике в Китае:**",
             parse_mode="Markdown",
-            disable_web_page_preview=True,
         )
         if os.path.exists("files/import_routes_2026.pdf"):
             await message.answer_document(
@@ -373,25 +352,29 @@ async def process_user_request(message: types.Message, keyword: str):
                 caption="🎯 Чек-лист «7 ловушек на 1688»",
             )
 
-        # Сообщение-догрев
+        # Сильное дожимное сообщение
+        warmup_text = (
+            "💡 **Как научиться закупать товары напрямую на фабриках за 1 вечер — даже без знания китайского языка?**\n\n"
+            "Вы получили гайд, но чтобы начать реальные закупки, нужно закрыть ключевые технические вопросы: **как зарегистрировать Alipay, как общаться с поставщиками без знания языка, как оплачивать и не потерять груз на таможне.**\n\n"
+            "На онлайн-курсе **«Закупки в Китае и РФ с нуля»** вы получите пошаговые наглядные видео-инструкции:\n\n"
+            "🔹 **Разбор 5 главных площадок:** 1688, Taobao, Pinduoduo, Dewu (бренды со скидкой до 70%) и Alibaba\n"
+            "🔹 **Практика:** Пошаговая регистрация кошелька **Alipay** и аккаунтов на фабриках\n"
+            "🔹 **Контакты и Брони:** База проверенных посредников в Китае + готовые скрипты общения\n"
+            "🔹 **Альтернатива:** Готовая база поставщиков в России — для старта без ожидания логистики!\n\n"
+            "🎓 *Автор курса:* **Елена Тимошенко** — эксперт e-Commerce с опытом с 2007 года (протестировано 1000+ товаров).\n\n"
+            "👇 **Нажмите кнопку ниже, чтобы посмотреть программу и получить доступ ко всем базам:**"
+        )
         await message.answer(
-            "💡 **Хотите закупать товары напрямую на фабриках Китая без посредников?**\n\n"
-            "Посмотреть практикум №2 по закупкам на 1688 и карго/белой логистике!",
+            warmup_text,
             parse_mode="Markdown",
             reply_markup=get_china_keyboard(),
         )
-        asyncio.create_task(
-            schedule_bundle_upsell(
-                message.chat.id, "Закупки в Китае и Логистика"
-            )
-        )
+        asyncio.create_task(schedule_bundle_upsell(message.chat.id, "china"))
 
     elif keyword == "смыслы":
         await message.answer(
-            "🧠 **Выдаю материалы по Продающим Смыслам и Упаковке:**"
-            + legal_note,
+            "🧠 **Выдаю материалы по Продающим Смыслам и Упаковке:**",
             parse_mode="Markdown",
-            disable_web_page_preview=True,
         )
         if os.path.exists("files/offer_constructor.pdf"):
             await message.answer_document(
@@ -404,34 +387,24 @@ async def process_user_request(message: types.Message, keyword: str):
                 caption="⚠️ Гайд «5 ошибок упаковки карточек»",
             )
 
-        # Сообщение-догрев
+        # Сильное дожимное сообщение
+        warmup_text = (
+            "💡 **В 2026 году продает не товар, а смысловая упаковка!**\n\n"
+            "Можно найти идеальную нишу и привезти товар из Китая, но если ваша карточка на МП, Авито или в соцсетях выглядит как у всех — вам придется снижать цену и работать в убыток.\n\n"
+            "**Продающие смыслы** — это единственное, что позволяет продавать **ДОРОЖЕ рынка** и не сливать бюджет на безумную рекламу.\n\n"
+            "На практикуме **«Продающие Смыслы & Упаковка»** от **Елены Тимошенко** вы получите:\n\n"
+            "🔹 **Конструктор офферов:** как находить истинные боли покупателей и закрывать их в визуале\n"
+            "🔹 **Отстройку от конкурентов:** как выделять товар среди сотен аналогичных\n"
+            "🔹 **Рост конверсии в 2–3 раза:** превращение кликов и просмотров в реальные оплаты\n\n"
+            "💎 Перестаньте отдавать свою маржу демпингующим конкурентам — заставьте клиентов влюбляться в ваш продукт!\n\n"
+            "👇 **Посмотреть практикум прямо сейчас:**"
+        )
         await message.answer(
-            "💡 **Хотите создавать офферы, которые продают дорого без демпинга?**\n\n"
-            "Посмотреть практикум №3 по продающим смысловым упаковкам!",
+            warmup_text,
             parse_mode="Markdown",
             reply_markup=get_smysly_keyboard(),
         )
-        asyncio.create_task(
-            schedule_bundle_upsell(
-                message.chat.id, "Продающие Смыслы и Офферы"
-            )
-        )
-
-    elif keyword == "практикум":
-        text = (
-            "🏗️ **Линейка Практикумов от Дипломированного Маркетолога:**\n\n"
-            "1️⃣ **Практикум №1:** Поиск Маржинальных Ниш & Юнит-экономика\n"
-            "2️⃣ **Практикум №2:** Безопасные закупки в Китае на 1688 & Логистика\n"
-            "3️⃣ **Практикум №3:** Продающие Смыслы & Авито/МП/Соцсети\n\n"
-            "🔥 **ПОЛНЫЙ БАНДЛ 3-в-1:** Заберите все 3 Практикума со скидкой 30%!"
-            + legal_note
-        )
-        await message.answer(
-            text,
-            parse_mode="Markdown",
-            reply_markup=get_bundle_keyboard(),
-            disable_web_page_preview=True,
-        )
+        asyncio.create_task(schedule_bundle_upsell(message.chat.id, "smysly"))
 
 
 # --- ОБРАБОТЧИК КНОПКИ «СТАРТ» С ДИПЛИНКАМИ И МЕНЮ ---
@@ -450,16 +423,14 @@ async def handle_start_with_menu(
     elif args == "smysly":
         await process_user_request(message, "смыслы")
         return
-    elif args == "praktikum":
-        await process_user_request(message, "практикум")
-        return
     elif args in ["start_course", "start"]:
         await process_user_request(message, "старт")
         return
 
     welcome_menu_text = (
         "👋 **Добро пожаловать в бот экспертного маркетинга в e-Commerce!**\n\n"
-        "Выберите направление, которое вас интересует, нажав на кнопку ниже:"
+        "Выберите направление, которое вас интересует, нажав на кнопку ниже:\n\n"
+        "P.S. Этот бот не собирает и не хранит Ваши личные данные"
     )
 
     menu_keyboard = InlineKeyboardMarkup(
@@ -488,11 +459,6 @@ async def handle_start_with_menu(
                     callback_data="menu_smysly",
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    text="🔥 Полный Бандл 3-в-1", callback_data="menu_praktikum"
-                )
-            ],
         ]
     )
 
@@ -515,8 +481,6 @@ async def process_menu_click(callback: types.CallbackQuery):
         await process_user_request(callback.message, "китай")
     elif action == "smysly":
         await process_user_request(callback.message, "смыслы")
-    elif action == "praktikum":
-        await process_user_request(callback.message, "практикум")
 
 
 @dp.message(F.text.lower().contains("старт"))
@@ -537,11 +501,6 @@ async def handle_text_china(message: types.Message):
 @dp.message(F.text.lower().contains("смыслы"))
 async def handle_text_smysly(message: types.Message):
     await process_user_request(message, "смыслы")
-
-
-@dp.message(F.text.lower().contains("практикум"))
-async def handle_text_praktikum(message: types.Message):
-    await process_user_request(message, "практикум")
 
 
 @dp.callback_query(F.data.startswith("check_sub_"))
