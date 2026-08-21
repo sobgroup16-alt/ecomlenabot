@@ -5,7 +5,7 @@ from datetime import datetime
 
 import aiosqlite
 from aiogram import Bot, Dispatcher, F, types
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup
@@ -15,9 +15,14 @@ from dotenv import load_dotenv
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
-CHANNEL_ID = os.getenv("CHANNEL_ID", "@your_channel")
-PRIVACY_URL = os.getenv("PRIVACY_URL", "https://t.me")
-EXPERT_TG = os.getenv("EXPERT_TG", "https://t.me")
+CHANNEL_ID = os.getenv("CHANNEL_ID", "@ecomlena")
+PRIVACY_URL = os.getenv("PRIVACY_URL", "https://your-domain.ru/privacy")
+
+# ЛЕНДИНГИ ПРАКТИКУМОВ И БАНДЛА
+URL_BUNDLE = "https://ecomlena.ru/bundle"
+URL_NISHA = "https://ecomlena.ru/zolotayanisha"
+URL_CHINA = "https://ecomlena.ru/china"
+URL_PACKING = "https://ecomlena.ru/packing"
 
 # Логирование
 logging.basicConfig(
@@ -68,18 +73,86 @@ class BroadcastState(StatesGroup):
     waiting_for_message = State()
 
 
-# --- КНОПКИ БАНДЛА И СВЯЗИ ---
+# --- КНОПКИ ДЛЯ КАЖДОГО НАПРАВЛЕНИЯ ---
 def get_bundle_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🎁 Забронировать Бандл 3-в-1 со скидкой", url=EXPERT_TG
+                    text="🎁 Забронировать Бандл 3-в-1 со скидкой",
+                    url=URL_BUNDLE,
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="💬 Задать вопрос эксперту", url=EXPERT_TG
+                    text="📢 Авторский Telegram-канал",
+                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
+                )
+            ],
+        ]
+    )
+
+
+def get_nisha_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🚀 Посмотреть практикум «Маржинальные ниши»",
+                    url=URL_NISHA,
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔥 Заберите Полный Бандл 3-в-1", url=URL_BUNDLE
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📢 Авторский Telegram-канал",
+                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
+                )
+            ],
+        ]
+    )
+
+
+def get_china_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🚀 Посмотреть практикум «Импорт из Китая & 1688»",
+                    url=URL_CHINA,
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔥 Заберите Полный Бандл 3-в-1", url=URL_BUNDLE
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📢 Авторский Telegram-канал",
+                    url=f"https://t.me/{CHANNEL_ID.replace('@', '')}",
+                )
+            ],
+        ]
+    )
+
+
+def get_smysly_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🚀 Посмотреть практикум «Продающие Смыслы»",
+                    url=URL_PACKING,
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔥 Заберите Полный Бандл 3-в-1", url=URL_BUNDLE
                 )
             ],
             [
@@ -106,7 +179,7 @@ async def check_subscription(user_id: int) -> bool:
 
 # --- АВТОДОГРЕВ ДО БАНДЛА (ЧЕРЕЗ 24 ЧАСА) ---
 async def schedule_bundle_upsell(chat_id: int, lead_magnet_name: str):
-    await asyncio.sleep(86400)  # 24 часа. Для быстрого теста укажите 30
+    await asyncio.sleep(86400)  # 24 часа
     upsell_text = (
         f"📊 <b>Вчера вы забирали материалы по теме «{lead_magnet_name}».</b>\n\n"
         "Знаете, какая главная ошибка селлеров? Наладить один процесс, но провалиться в других.\n\n"
@@ -209,7 +282,7 @@ async def send_lesson(chat_id: int, lesson_num: int):
         )
 
 
-# --- ЕДИНЫЙ ОБРАБОТЧИК ЗАПРОСОВ (ПРОВЕРКА ПОДПИСКИ + ЮРИДИЧЕСКАЯ ЗАЩИТА) ---
+# --- ЕДИНЫЙ ОБРАБОТЧИК ЗАПРОСОВ (ПРОВЕРКА ПОДПИСКИ + ВЫДАЧА) ---
 async def process_user_request(message: types.Message, keyword: str):
     user_id = message.from_user.id
     await register_user(message.from_user, segment=f"lead_{keyword}")
@@ -234,7 +307,7 @@ async def process_user_request(message: types.Message, keyword: str):
             ]
         )
         await message.answer(
-            "🔒 **Для получения материала подпишитесь на наш авторский Telegram-канал:**\n\n"
+            "🔒 **Для получения материала подпишитесь на наш авторский Telegram-канал ecomlena:**\n\n"
             "Там выходят ежедневные разборы узких ниш, аналитика импорта из Китая и живые эфиры!",
             parse_mode="Markdown",
             reply_markup=kb,
@@ -263,14 +336,21 @@ async def process_user_request(message: types.Message, keyword: str):
         if os.path.exists("files/calc_unit_economy.xlsx"):
             await message.answer_document(
                 FSInputFile("files/calc_unit_economy.xlsx"),
-                caption="🧮 Лид-магнит 1.1: Интерактивный Калькулятор 2.0",
+                caption="🧮 Интерактивный Калькулятор 2.0",
             )
         if os.path.exists("files/15_niches_2026.pdf"):
             await message.answer_document(
                 FSInputFile("files/15_niches_2026.pdf"),
-                caption="📖 Лид-магнит 1.2: 15 узких ниш 2026 года",
-                reply_markup=get_bundle_keyboard(),
+                caption="📖 Гайд «15 узких ниш 2026 года»",
             )
+
+        # Сообщение-догрев
+        await message.answer(
+            "💡 **Хотите глубже освоить поиск прибыльных ниш и юнит-экономику?**\n\n"
+            "Посмотреть практикум №1 или заберите полный Бандл 3-в-1 со скидкой!",
+            parse_mode="Markdown",
+            reply_markup=get_nisha_keyboard(),
+        )
         asyncio.create_task(
             schedule_bundle_upsell(message.chat.id, "Маржа и Юнит-экономика")
         )
@@ -285,14 +365,21 @@ async def process_user_request(message: types.Message, keyword: str):
         if os.path.exists("files/import_routes_2026.pdf"):
             await message.answer_document(
                 FSInputFile("files/import_routes_2026.pdf"),
-                caption="🗺️ Лид-магнит 2.1: Безопасный импорт 2026",
+                caption="🗺️ Гайд «Безопасный импорт 2026»",
             )
         if os.path.exists("files/1688_traps.pdf"):
             await message.answer_document(
                 FSInputFile("files/1688_traps.pdf"),
-                caption="🎯 Лид-магнит 2.2: 7 ловушек на 1688",
-                reply_markup=get_bundle_keyboard(),
+                caption="🎯 Чек-лист «7 ловушек на 1688»",
             )
+
+        # Сообщение-догрев
+        await message.answer(
+            "💡 **Хотите закупать товары напрямую на фабриках Китая без посредников?**\n\n"
+            "Посмотреть практикум №2 по закупкам на 1688 и карго/белой логистике!",
+            parse_mode="Markdown",
+            reply_markup=get_china_keyboard(),
+        )
         asyncio.create_task(
             schedule_bundle_upsell(
                 message.chat.id, "Закупки в Китае и Логистика"
@@ -309,14 +396,21 @@ async def process_user_request(message: types.Message, keyword: str):
         if os.path.exists("files/offer_constructor.pdf"):
             await message.answer_document(
                 FSInputFile("files/offer_constructor.pdf"),
-                caption="🛠️ Лид-магнит 3.1: Конструктор продающих смыслов",
+                caption="🛠️ Гайд «Конструктор продающих смыслов»",
             )
         if os.path.exists("files/5_packaging_errors.pdf"):
             await message.answer_document(
                 FSInputFile("files/5_packaging_errors.pdf"),
-                caption="⚠️ Лид-магнит 3.2: 5 ошибок упаковки карточек",
-                reply_markup=get_bundle_keyboard(),
+                caption="⚠️ Гайд «5 ошибок упаковки карточек»",
             )
+
+        # Сообщение-догрев
+        await message.answer(
+            "💡 **Хотите создавать офферы, которые продают дорого без демпинга?**\n\n"
+            "Посмотреть практикум №3 по продающим смысловым упаковкам!",
+            parse_mode="Markdown",
+            reply_markup=get_smysly_keyboard(),
+        )
         asyncio.create_task(
             schedule_bundle_upsell(
                 message.chat.id, "Продающие Смыслы и Офферы"
@@ -340,30 +434,113 @@ async def process_user_request(message: types.Message, keyword: str):
         )
 
 
-# --- ОБРАБОТЧИКИ КОМАНД И CALLBACKS ---
+# --- ОБРАБОТЧИК КНОПКИ «СТАРТ» С ДИПЛИНКАМИ И МЕНЮ ---
 @dp.message(CommandStart())
+async def handle_start_with_menu(
+    message: types.Message, command: CommandObject
+):
+    args = command.args
+
+    if args == "marzha":
+        await process_user_request(message, "маржа")
+        return
+    elif args == "china":
+        await process_user_request(message, "китай")
+        return
+    elif args == "smysly":
+        await process_user_request(message, "смыслы")
+        return
+    elif args == "praktikum":
+        await process_user_request(message, "практикум")
+        return
+    elif args in ["start_course", "start"]:
+        await process_user_request(message, "старт")
+        return
+
+    welcome_menu_text = (
+        "👋 **Добро пожаловать в бот экспертного маркетинга в e-Commerce!**\n\n"
+        "Выберите направление, которое вас интересует, нажав на кнопку ниже:"
+    )
+
+    menu_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🎓 Я Новичок: Пройти 5 уроков",
+                    callback_data="menu_start",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📊 МАРЖА: Калькулятор & Маржинальные ниши",
+                    callback_data="menu_marzha",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🇨🇳 КИТАЙ: Импорт & Закупки на 1688",
+                    callback_data="menu_china",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧠 СМЫСЛЫ: Продающие смыслы & Упаковка",
+                    callback_data="menu_smysly",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔥 Полный Бандл 3-в-1", callback_data="menu_praktikum"
+                )
+            ],
+        ]
+    )
+
+    await message.answer(
+        welcome_menu_text, parse_mode="Markdown", reply_markup=menu_keyboard
+    )
+
+
+# --- ОБРАБОТКА НАЖАТИЙ НА КНОПКИ МЕНЮ И CALLBACKS ---
+@dp.callback_query(F.data.startswith("menu_"))
+async def process_menu_click(callback: types.CallbackQuery):
+    action = callback.data.replace("menu_", "")
+    await callback.answer()
+
+    if action == "start":
+        await process_user_request(callback.message, "старт")
+    elif action == "marzha":
+        await process_user_request(callback.message, "маржа")
+    elif action == "china":
+        await process_user_request(callback.message, "китай")
+    elif action == "smysly":
+        await process_user_request(callback.message, "смыслы")
+    elif action == "praktikum":
+        await process_user_request(callback.message, "практикум")
+
+
 @dp.message(F.text.lower().contains("старт"))
-async def handle_start(message: types.Message):
+async def handle_text_start(message: types.Message):
     await process_user_request(message, "старт")
 
 
 @dp.message(F.text.lower().contains("маржа"))
-async def handle_marzha(message: types.Message):
+async def handle_text_marzha(message: types.Message):
     await process_user_request(message, "маржа")
 
 
 @dp.message(F.text.lower().contains("китай"))
-async def handle_china(message: types.Message):
+async def handle_text_china(message: types.Message):
     await process_user_request(message, "китай")
 
 
 @dp.message(F.text.lower().contains("смыслы"))
-async def handle_smysly(message: types.Message):
+async def handle_text_smysly(message: types.Message):
     await process_user_request(message, "смыслы")
 
 
 @dp.message(F.text.lower().contains("практикум"))
-async def handle_praktikum(message: types.Message):
+async def handle_text_praktikum(message: types.Message):
     await process_user_request(message, "практикум")
 
 
